@@ -6,6 +6,8 @@ import numpy as np
 import pyautogui
 import dxcam
 from PIL import ImageGrab
+import win32gui
+from win32screenshoter import background_screenshot
 
 camera = dxcam.create()
 # Time for dxcam after creation an object
@@ -109,10 +111,31 @@ def screen_record_dxcam(region=None):
     return fps
 
 
+def screen_record_win32(window_name, region=None):
+    # Window has to be opened
+    title = "[Win32] FPS benchmark"
+    hwnd = win32gui.FindWindow(None, window_name)
+    fps = 0
+    last_time = time.time()
+
+    while time.time() - last_time < 1:
+        img = background_screenshot(hwnd, region)
+
+        fps += 1
+
+        cv2.imshow(title, cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            cv2.destroyAllWindows()
+            break
+
+    return fps
+
+
 full_screen = {
     "PyAutoGUI": [],
     "PIL": [],
     "MSS": [],
+    "Win32": [],
     "DXcam": [],
 }
 
@@ -120,6 +143,7 @@ cropped_screen = {
     "PyAutoGUI": [],
     "PIL": [],
     "MSS": [],
+    "Win32": [],
     "DXcam": [],
 }
 
@@ -128,12 +152,14 @@ for _ in range(10):
     full_screen["PyAutoGUI"].append(screen_record_pyautogui())
     full_screen["PIL"].append(screen_record_pil())
     full_screen["MSS"].append(screen_record_mss())
+    full_screen["Win32"].append(screen_record_win32("winname"))
     full_screen["DXcam"].append(screen_record_dxcam())
 
     # Cropped screen
     cropped_screen["PyAutoGUI"].append(screen_record_pyautogui((0, 40, 800, 640)))
     cropped_screen["PIL"].append(screen_record_pil((0, 40, 800, 640)))
     cropped_screen["MSS"].append(screen_record_mss({"top": 40, "left": 0, "width": 800, "height": 640}))
+    cropped_screen["Win32"].append(screen_record_win32("winname", (0, 0, 800, 600)))
     cropped_screen["DXcam"].append(screen_record_dxcam((0, 40, 800, 640)))
 
 print("Full screen", [np.array(method).mean() for method in full_screen.values()])
