@@ -31,3 +31,5 @@ Cropped screen [15.0, 15.1, 39.0, 30.1, 57.7]
 **DXcam** seems to be the fastest but for now I got an issue with reading from ```DXcam``` object from main and additional thread simultaneously.
 
 All packages are available from PIP from PyCharm except DXcam. You can find it [here](https://github.com/ra1nty/DXcam)
+
+Also it is possible to read screen via [adb](https://developer.android.com/studio/command-line/adb) connecting it to BlueStacks for example. 

@@ -14,3 +14,5 @@ PyScreeze==0.1.28
 pytweening==1.0.4
 setuptools==60.2.0
 wheel==0.37.1
+dxcam~=0.0.5
+pypiwin32
