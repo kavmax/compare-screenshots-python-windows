@@ -1,171 +1,50 @@
 import time
-
 import cv2
-import mss
-import numpy as np
-import pyautogui
-import dxcam
-from PIL import ImageGrab
-import win32gui
-from win32screenshoter import background_screenshot
 
-camera = dxcam.create()
-# Time for dxcam after creation an object
-time.sleep(0.1)
-
-cv_wait_time = 1
+from screen_utils.win32_screen import Win32Screen
+from screen_utils.pil_screen import PilScreen
+from screen_utils.mss_screen import MssScreen
+from screen_utils.dxcam_screen import DxcamScreen
+from screen_utils.pyautogui_screen import PyautoguiScreen
+from screen_utils.adb_bluestacks_screen import AdbBlueStacksScreen
 
 
-def screen_record_pyautogui(region=None):
-    title = "[PyAutoGUI] FPS benchmark"
+def run_screen_taker(screen):
     fps = 0
     last_time = time.time()
 
     while time.time() - last_time < 1:
-        if region is not None:
-            img = np.asarray(pyautogui.screenshot(region=region))
-        else:
-            img = np.asarray(pyautogui.screenshot())
-
+        screenshot = screen.take_screenshot()
         fps += 1
 
-        cv2.imshow(title, cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+        cv_wait_time = 1
+        cv2.imshow(str(screen), cv2.cvtColor(screenshot, cv2.COLOR_BGR2RGB))
         if cv2.waitKey(cv_wait_time) & 0xFF == ord("q"):
             cv2.destroyAllWindows()
             break
 
+    print(f"{screen} - {fps} FPS with region {getattr(screen, 'region', '[region unset]')}")
     return fps
 
 
-def screen_record_pil(region=None):
-    title = "[PIL.ImageGrab] FPS benchmark"
-    fps = 0
-    last_time = time.time()
+if __name__ == "__main__":
+    cropped_screen, full_screen = {}, {}
 
-    while time.time() - last_time < 1:
-        if region is not None:
-            img = np.asarray(ImageGrab.grab(bbox=region))
-        else:
-            img = np.asarray(ImageGrab.grab())
+    screen_methods = [
+        Win32Screen(window_name="wnd", region=(0, 40, 800, 640)),
+        PilScreen(region=(0, 40, 800, 640)),
+        MssScreen(region=(0, 40, 800, 640)),
+        DxcamScreen(region=(0, 40, 800, 640)),
+        PyautoguiScreen(region=(0, 40, 800, 640)),
+        AdbBlueStacksScreen()
+    ]
 
-        fps += 1
+    for screen_method in screen_methods:
+        cropped_screen[str(screen_method)] = run_screen_taker(screen_method)
 
-        cv2.imshow(title, cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-        if cv2.waitKey(cv_wait_time) & 0xFF == ord("q"):
-            cv2.destroyAllWindows()
-            break
+        screen_method.__setattr__("region", None)
 
-    return fps
+        full_screen[str(screen_method)] = run_screen_taker(screen_method)
 
-
-def screen_record_mss(region=None):
-    # 800x600 windowed mode
-    mon = {"top": 40, "left": 0, "width": 800, "height": 640}
-
-    title = "[MSS] FPS benchmark"
-    fps = 0
-    sct = mss.mss()
-    last_time = time.time()
-
-    def numpy_flip(im):
-        """ Most efficient Numpy version as of now. """
-        frame = np.array(im, dtype=np.uint8)
-        return np.flip(frame[:, :, :3], 2).tobytes()
-
-    while time.time() - last_time < 1:
-        if region is not None:
-            img = np.asarray(sct.grab(region))
-        else:
-            img = np.asarray(sct.grab(sct.monitors[0]))
-
-        fps += 1
-
-        cv2.imshow(title, cv2.cvtColor(img, cv2.COLOR_BGRA2RGB))
-        if cv2.waitKey(cv_wait_time) & 0xFF == ord("q"):
-            cv2.destroyAllWindows()
-            break
-
-    return fps
-
-
-def screen_record_dxcam(region=None):
-    title = "[DXcam] FPS benchmark"
-
-    fps = 0
-    last_time = time.time()
-
-    while time.time() - last_time < 1:
-        img = None
-        while img is None:
-            if region is not None:
-                img = camera.grab(region=(0, 40, 800, 640))
-            else:
-                img = camera.grab()
-        else:
-            fps += 1
-            cv2.imshow(title, cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-            if cv2.waitKey(cv_wait_time) & 0xFF == ord("q"):
-                cv2.destroyAllWindows()
-                break
-
-    return fps
-
-
-def screen_record_win32(window_name, region=None):
-    # Window has to be opened
-    title = "[Win32] FPS benchmark"
-    hwnd = win32gui.FindWindow(None, window_name)
-    fps = 0
-    last_time = time.time()
-
-    while time.time() - last_time < 1:
-        img = background_screenshot(hwnd, region)
-
-        fps += 1
-
-        cv2.imshow(title, cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            cv2.destroyAllWindows()
-            break
-
-    return fps
-
-
-full_screen = {
-    "PyAutoGUI": [],
-    "PIL": [],
-    "MSS": [],
-    "Win32": [],
-    "DXcam": [],
-}
-
-cropped_screen = {
-    "PyAutoGUI": [],
-    "PIL": [],
-    "MSS": [],
-    "Win32": [],
-    "DXcam": [],
-}
-
-for _ in range(10):
-    # Full screen
-    full_screen["PyAutoGUI"].append(screen_record_pyautogui())
-    full_screen["PIL"].append(screen_record_pil())
-    full_screen["MSS"].append(screen_record_mss())
-    full_screen["Win32"].append(screen_record_win32("winname"))
-    full_screen["DXcam"].append(screen_record_dxcam())
-
-    # Cropped screen
-    cropped_screen["PyAutoGUI"].append(screen_record_pyautogui((0, 40, 800, 640)))
-    cropped_screen["PIL"].append(screen_record_pil((0, 40, 800, 640)))
-    cropped_screen["MSS"].append(screen_record_mss({"top": 40, "left": 0, "width": 800, "height": 640}))
-    cropped_screen["Win32"].append(screen_record_win32("winname", (0, 0, 800, 600)))
-    cropped_screen["DXcam"].append(screen_record_dxcam((0, 40, 800, 640)))
-
-print("Full screen", [np.array(method).mean() for method in full_screen.values()])
-print(full_screen)
-
-print("-----")
-
-print("Cropped screen", [np.array(method).mean() for method in cropped_screen.values()])
-print(cropped_screen)
+    print(cropped_screen)
+    print(full_screen)
