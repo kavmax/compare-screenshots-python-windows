@@ -2,7 +2,7 @@ import dxcam
 
 
 class DxcamScreen:
-    def __init__(self, region):
+    def __init__(self, region=None):
         self.camera = dxcam.create()
         self.region = region
 
