@@ -28,9 +28,11 @@ def run_screen_taker(screen):
 
 
 if __name__ == "__main__":
+    NUM_ITERATIONS = 10
     cropped_screen, full_screen = {}, {}
+    cropped_screen_mean, full_screen_mean = {}, {}
 
-    screen_methods = [
+    screen_methods_cropped = [
         Win32Screen(window_name="wnd", region=(0, 40, 800, 640)),
         PilScreen(region=(0, 40, 800, 640)),
         MssScreen(region=(0, 40, 800, 640)),
@@ -38,13 +40,26 @@ if __name__ == "__main__":
         PyautoguiScreen(region=(0, 40, 800, 640)),
         AdbBlueStacksScreen()
     ]
+    screen_methods_full = [
+        Win32Screen(window_name="wnd"),
+        PilScreen(),
+        MssScreen(),
+        DxcamScreen(),
+        PyautoguiScreen(),
+        AdbBlueStacksScreen()
+    ]
 
-    for screen_method in screen_methods:
-        cropped_screen[str(screen_method)] = run_screen_taker(screen_method)
+    for screen_method in screen_methods_cropped:
+        cropped_screen[str(screen_method)] = [run_screen_taker(screen_method) for _ in range(NUM_ITERATIONS)]
 
-        screen_method.__setattr__("region", None)
+    for screen_method in screen_methods_full:
+        full_screen[str(screen_method)] = [run_screen_taker(screen_method) for _ in range(NUM_ITERATIONS)]
 
-        full_screen[str(screen_method)] = run_screen_taker(screen_method)
+    for k, _ in cropped_screen.items():
+        cropped_screen_mean[k] = sum(cropped_screen[k]) / len(cropped_screen[k])
+        full_screen_mean[k] = sum(full_screen[k]) / len(full_screen[k])
 
     print(cropped_screen)
+    print(cropped_screen_mean)
     print(full_screen)
+    print(full_screen_mean)
